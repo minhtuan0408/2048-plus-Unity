@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using static Unity.Collections.AllocatorManager;
@@ -48,7 +49,7 @@ public class GameManager : MonoBehaviour
         Score = 0;   
         Spawn(Cell);
         Spawn(Cell);
-
+        AudioManager.Instance.PlayMusic("Theme");
     }
     private void Update()
     {
@@ -87,31 +88,22 @@ public class GameManager : MonoBehaviour
 
     private void CheckChildInCells()
     {
-        int cnt = 0;
-        foreach (Cell block in CellList)
-        {
-            if (block.gameObject != null && block.gameObject.transform.childCount > 0) // Kiểm tra child
-            {
-                cnt++;
-                Debug.Log($"Block {block.gameObject.name} có child.");
-            }
+        int occupiedCells = CellList.Count(cell => cell.gameObject?.transform.childCount > 0);
 
-        }
-
-        if (cnt >= 17)
+        if (occupiedCells >= 17)
         {
             GameOver.SetActive(true);
             isLose = true;
+            Debug.Log("GameOVer");
         }
     }
-    
 
     public IEnumerator TimeMove()
     {
         CheckChildInCells();
         yield return new WaitForSeconds(0.3f);
 
-        if (!isLose) // Kiểm tra nếu không thua
+        if (!isLose) 
         {
             canMove = true;
             Spawn(Cell);
@@ -121,38 +113,41 @@ public class GameManager : MonoBehaviour
             Debug.Log("Thua! Không spawn block.");
         }
     }
+
     public void Spawn(GameObject obj)
     {
-        bool canSpawn = true;
-        Transform emptyCell = parent.GetChild(0);
-        int cellSpawn = 0;
-        int checKEmpty =0;
-        while (canSpawn || checKEmpty >18)
+        const int maxAttempts = 18; 
+        int attempts = 0;
+        bool foundEmpty = false;
+        Transform emptyCell = null;
+
+        while (attempts < maxAttempts)
         {
-            checKEmpty++;
-            cellSpawn = UnityEngine.Random.Range(0, amountSpawn + 1);
-            emptyCell = parent.GetChild(cellSpawn);
-            if (emptyCell.childCount == 0)
-            {
-                canSpawn = false;
-            }
+            attempts++;
+            int cellIndex = UnityEngine.Random.Range(0, amountSpawn + 1);
+            emptyCell = parent.GetChild(cellIndex);
 
-            if (checKEmpty > 19)
+            if (emptyCell.childCount == 0) 
             {
-                print("GameOver");
-                GameOver.SetActive(true );
-                isLose = true;
+                foundEmpty = true;
+                break;
             }
-
-            print(checKEmpty);
         }
 
-        GameObject block = Instantiate(obj, emptyCell);
-
-        CellList[cellSpawn].Block = block.GetComponent<BLock>();
-        print("Sinh ở ô " + cellSpawn);
-        print(block.name);
+        if (foundEmpty)
+        {
+            GameObject block = Instantiate(obj, emptyCell);
+            CellList[emptyCell.GetSiblingIndex()].Block = block.GetComponent<BLock>();
+            Debug.Log($"Sinh ở ô {emptyCell.GetSiblingIndex()}");
+        }
+        else
+        {
+            Debug.Log("Không còn ô trống! GameOver.");
+            GameOver.SetActive(true);
+            isLose = true;
+        }
     }
+
 
     private void GetAllCell() 
     {
@@ -210,6 +205,7 @@ public class GameManager : MonoBehaviour
                 {
                     ticker = 0;
                     slide("D");
+                    AudioManager.Instance.PlaySFX("Move");
                     StartCoroutine(TimeMove());
                 }
                 else if (x < 0 && canMove)
@@ -217,7 +213,7 @@ public class GameManager : MonoBehaviour
                     ticker = 0;
                     slide("A");
                     StartCoroutine(TimeMove());
-                    
+                    AudioManager.Instance.PlaySFX("Move");
                 }
                 
             }
@@ -229,13 +225,14 @@ public class GameManager : MonoBehaviour
                     ticker = 0;
                     slide("E");
                     StartCoroutine(TimeMove());
-
+                    AudioManager.Instance.PlaySFX("Move");
                 }
                 if (x > 0 && y < 0 && canMove)
                 {
                     ticker = 0;
                     slide("X");
                     StartCoroutine(TimeMove());
+                    AudioManager.Instance.PlaySFX("Move");
 
                 }
                 if (x < 0 && y > 0 && canMove)
@@ -243,12 +240,14 @@ public class GameManager : MonoBehaviour
                     ticker = 0;
                     slide("W");
                     StartCoroutine(TimeMove());
+                    AudioManager.Instance.PlaySFX("Move");
                 }
                 if (x < 0 && y < 0 && canMove)
                 {
                     ticker = 0;
                     slide("Z");
                     StartCoroutine(TimeMove());
+                    AudioManager.Instance.PlaySFX("Move");
                 }
                
             }
